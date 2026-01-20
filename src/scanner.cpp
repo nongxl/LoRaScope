@@ -195,10 +195,17 @@ void FrequencyListener::prevFrequency() {
 }
 
 void FrequencyListener::handleRxDone(const RecvFrame_t& frame) {
+    int16_t rssi = frame.rssi;
+    
+    if (rssi < -120 || rssi > -50) {
+        USBSerial.printf("[Listener] Invalid RSSI: %d dBm, ignoring\n", rssi);
+        return;
+    }
+    
     RadarPoint point;
     point.timestamp = millis();
     point.frequency = config.frequencies[config.currentFreqIndex].frequency;
-    point.rssi = frame.rssi;
+    point.rssi = rssi;
     point.snr = -20;
     point.packetLength = frame.recv_data_len;
     point.eventType = EVENT_RX_DONE;
