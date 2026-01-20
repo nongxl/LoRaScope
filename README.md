@@ -1,7 +1,7 @@
 # LoRaScope - LoRa 射频环境感知工具
 
 基于 M5Cardputer 的LoRa 射频环境感知工具，通过周期性扫描多个频点，采样 RSSI/SNR/接收结果，来推断无线活动强度，并以"图表"形式在屏幕上展示。
-
+![LoRaScope](LoRaScope.jpg)
 ## 功能特性
 
 - **多频点扫描**：支持配置多个频点进行周期性扫描
