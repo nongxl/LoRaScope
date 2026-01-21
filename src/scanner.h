@@ -41,9 +41,13 @@ public:
     
     bool isRunning() const;
     uint32_t getCurrentFrequency() const;
-    uint8_t getCurrentFreqIndex() const;
+    uint16_t getCurrentFreqIndex() const;
+    uint32_t getFrequencyAt(uint16_t index) const;
+    uint8_t getFrequencyCount() const;
     void nextFrequency();
     void prevFrequency();
+    void nextFrequency(int step);
+    void prevFrequency(int step);
     ListenerConfig getConfig() const;
     void setConfig(const ListenerConfig& cfg);
     

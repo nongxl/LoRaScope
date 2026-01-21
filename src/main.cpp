@@ -106,7 +106,7 @@ void setup() {
     }
     display->setFrequencies(freqList);
     
-    if (listener) {
+    if (listenerInitSuccess && listener) {
         display->setCurrentFreq(listener->getCurrentFrequency());
         display->setCurrentFreqIndex(listener->getCurrentFreqIndex(), config.frequencies.size());
     }
@@ -115,12 +115,18 @@ void setup() {
     USBSerial.println("Step 9: Starting listener...");
     delay(100);
     
-    listener->setScopeDisplay(display);
+    if (listenerInitSuccess && listener) {
+        listener->setScopeDisplay(display);
+    }
     
     USBSerial.println("Listener ready (press 's' to start)");
     
-    uint32_t startFreq = config.frequencies[0].frequency;
-    USBSerial.printf("Step 10: Auto-starting listener at %lu Hz...\n", startFreq);
+    if (!config.frequencies.empty()) {
+        uint32_t startFreq = config.frequencies[0].frequency;
+        USBSerial.printf("Step 10: Auto-starting listener at %lu Hz...\n", startFreq);
+    } else {
+        USBSerial.println("Step 10: No frequencies configured, skipping auto-start");
+    }
     delay(100);
     
     if (listenerInitSuccess) {
@@ -151,6 +157,16 @@ void loop() {
     
     static unsigned long lastKeyPressMillis = 0;
     const unsigned long debounceDelay = 200;
+    const unsigned long longPressDelay = 500;
+    const unsigned long repeatDelay = 100;
+    static unsigned long minusKeyPressTime = 0;
+    static unsigned long equalKeyPressTime = 0;
+    static unsigned long lastMinusRepeatTime = 0;
+    static unsigned long lastEqualRepeatTime = 0;
+    static bool minusKeyPressed = false;
+    static bool equalKeyPressed = false;
+    static int minusKeyStep = 0;
+    static int equalKeyStep = 0;
     
     if (M5Cardputer.Keyboard.isChange() && millis() - lastKeyPressMillis >= debounceDelay) {
         auto keys = M5Cardputer.Keyboard.keysState();
@@ -209,6 +225,7 @@ void loop() {
                         uint8_t idx = listener->getCurrentFreqIndex();
                         USBSerial.printf("Previous frequency: index %d\n", idx);
                     }
+                    minusKeyPressed = true;
                     break;
                 case '=':
                     if (listener) {
@@ -216,11 +233,78 @@ void loop() {
                         uint8_t idx = listener->getCurrentFreqIndex();
                         USBSerial.printf("Next frequency: index %d\n", idx);
                     }
+                    equalKeyPressed = true;
                     break;
             }
         }
         
         lastKeyPressMillis = millis();
+    }
+    
+    auto currentKeys = M5Cardputer.Keyboard.keysState();
+    bool minusKeyCurrentlyPressed = false;
+    bool equalKeyCurrentlyPressed = false;
+    
+    for (auto key : currentKeys.word) {
+        if (key == '-') {
+            minusKeyCurrentlyPressed = true;
+            if (minusKeyPressTime == 0) {
+                minusKeyPressTime = millis();
+            }
+        } else if (key == '=') {
+            equalKeyCurrentlyPressed = true;
+            if (equalKeyPressTime == 0) {
+                equalKeyPressTime = millis();
+            }
+        }
+    }
+    
+    if (minusKeyPressed && minusKeyCurrentlyPressed && listener) {
+        unsigned long currentTime = millis();
+        if (currentTime - minusKeyPressTime >= longPressDelay && currentTime - lastMinusRepeatTime >= repeatDelay) {
+            // 长按期间每次执行10倍步进，而不是1倍步进
+            listener->prevFrequency(10);
+            USBSerial.println("[Long Press] Previous frequency (10x step)");
+            lastMinusRepeatTime = currentTime;
+        }
+    }
+    
+    if (equalKeyPressed && equalKeyCurrentlyPressed && listener) {
+        unsigned long currentTime = millis();
+        if (currentTime - equalKeyPressTime >= longPressDelay && currentTime - lastEqualRepeatTime >= repeatDelay) {
+            // 长按期间每次执行10倍步进，而不是1倍步进
+            listener->nextFrequency(10);
+            USBSerial.println("[Long Press] Next frequency (10x step)");
+            lastEqualRepeatTime = currentTime;
+        }
+    }
+    
+    if (!minusKeyCurrentlyPressed && minusKeyPressed) {
+        // 长按松开时重置状态
+        minusKeyPressTime = 0;
+        minusKeyPressed = false;
+        lastMinusRepeatTime = 0;
+        minusKeyStep = 0;
+    }
+    
+    if (!equalKeyCurrentlyPressed && equalKeyPressed) {
+        // 长按松开时重置状态
+        equalKeyPressTime = 0;
+        equalKeyPressed = false;
+        lastEqualRepeatTime = 0;
+        equalKeyStep = 0;
+    }
+    
+    if (minusKeyCurrentlyPressed && !minusKeyPressed) {
+        minusKeyPressed = true;
+        minusKeyPressTime = millis();
+        lastMinusRepeatTime = millis();
+    }
+    
+    if (equalKeyCurrentlyPressed && !equalKeyPressed) {
+        equalKeyPressed = true;
+        equalKeyPressTime = millis();
+        lastEqualRepeatTime = millis();
     }
     
     uint8_t batteryPct = M5Cardputer.Power.getBatteryLevel();

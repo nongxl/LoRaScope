@@ -15,7 +15,7 @@ public:
     
     virtual bool init() = 0;
     virtual bool setFrequency(uint32_t freqHz) = 0;
-    virtual bool setBandwidth(uint8_t bandwidth) = 0;
+    virtual bool setBandwidth(uint16_t bandwidth) = 0;
     virtual bool setSpreadingFactor(uint8_t sf) = 0;
     virtual bool setCodingRate(uint8_t cr) = 0;
     virtual int16_t getRSSI() = 0;
@@ -42,7 +42,7 @@ public:
     
     bool init() override;
     bool setFrequency(uint32_t freqHz) override;
-    bool setBandwidth(uint8_t bandwidth) override;
+    bool setBandwidth(uint16_t bandwidth) override;
     bool setSpreadingFactor(uint8_t sf) override;
     bool setCodingRate(uint8_t cr) override;
     int16_t getRSSI() override;
@@ -78,7 +78,7 @@ public:
     
     bool init() override;
     bool setFrequency(uint32_t freqHz) override;
-    bool setBandwidth(uint8_t bandwidth) override;
+    bool setBandwidth(uint16_t bandwidth) override;
     bool setSpreadingFactor(uint8_t sf) override;
     bool setCodingRate(uint8_t cr) override;
     int16_t getRSSI() override;
@@ -110,7 +110,7 @@ public:
     
     bool init() override;
     bool setFrequency(uint32_t freqHz) override;
-    bool setBandwidth(uint8_t bandwidth) override;
+    bool setBandwidth(uint16_t bandwidth) override;
     bool setSpreadingFactor(uint8_t sf) override;
     bool setCodingRate(uint8_t cr) override;
     int16_t getRSSI() override;

@@ -16,19 +16,27 @@ enum LoRaModuleType {
 
 // 频点配置
 struct FrequencyConfig {
-    uint32_t frequency;      // 频率 (Hz)
-    uint32_t dwellTime;      // 停留时间 (ms)
-    uint8_t bandwidth;       // 带宽 (125/250/500 kHz)
-    uint8_t spreadingFactor; // 扩频因子 (7-12)
-    uint8_t codingRate;      // 编码率 (4/5, 4/6, 4/7, 4/8)
+    uint32_t frequency;       // 频率 (Hz)
+    uint16_t dwellTime;        // 驻留时间 (ms)
+    uint16_t bandwidth;        // 带宽 (125/250/500 kHz)
+    uint8_t spreadingFactor;   // 扩频因子 (7-12)
+    uint8_t codingRate;        // 编码率 (4/5 to 4/8)
     
     FrequencyConfig(uint32_t freq = 433000000, uint32_t dwell = 1000, 
-                    uint8_t bw = 125, uint8_t sf = 7, uint8_t cr = 5)
+                    uint16_t bw = 125, uint8_t sf = 7, uint8_t cr = 5)
         : frequency(freq), dwellTime(dwell), bandwidth(bw), 
           spreadingFactor(sf), codingRate(cr) {}
+    
+    String toString() const {
+        return "Freq: " + String(frequency / 1000000.0, 3) + " MHz, " +
+               "Dwell: " + String(dwellTime) + " ms, " +
+               "BW: " + String(bandwidth) + " kHz, " +
+               "SF: " + String(spreadingFactor) + ", " +
+               "CR: 4/" + String(codingRate);
+    }
 };
 
-// 单次采样结果
+// 扫描样本
 struct ScanSample {
     uint32_t frequency;
     int16_t rssi;            // 信号强度 (dBm)
@@ -122,9 +130,9 @@ struct EventStats {
 // 监听配置
 struct ListenerConfig {
     std::vector<FrequencyConfig> frequencies;
-    uint8_t currentFreqIndex;
+    uint16_t currentFreqIndex;
     uint16_t rxWindowMs;
-    uint8_t bandwidth;
+    uint16_t bandwidth;
     uint8_t spreadingFactor;
     uint8_t codingRate;
     uint16_t maxPoints;

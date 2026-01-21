@@ -6,8 +6,8 @@
 LoRaScopeConfig getUserConfig() {
     LoRaScopeConfig config;
     
-    config.startFreqHz = 433050000;
-    config.endFreqHz = 434790000;
+    config.startFreqHz = 410125000;
+    config.endFreqHz = 493125000;
     config.freqStepHz = 100000;
     config.rxWindowMs = 1000;
     config.bandwidth = 125;

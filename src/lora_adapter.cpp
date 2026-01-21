@@ -38,31 +38,63 @@ bool E220Adapter::setFrequency(uint32_t freqHz) {
     
     USBSerial.println("[E220] Setting frequency: " + String(freqHz) + " Hz");
     
+    // 使用默认配置
     LoRaConfigItem_t config;
     lora->SetDefaultConfigValue(config);
     
     uint16_t channel = 0;
     if (moduleType == LORA_E220_433) {
-        channel = (freqHz - 410125000) / 1000000;
+        channel = (freqHz - 410125000) / 100000;
+        // 确保通道值在有效范围内（0-255）
+        if (channel > 255) {
+            channel = 255;
+        }
         USBSerial.println("[E220] 433MHz mode, calculated channel: " + String(channel));
+        
+        uint32_t actualFreq = 410125000 + channel * 100000;
+        USBSerial.println("[E220] Calculated actual frequency: " + String(actualFreq) + " Hz");
     } else if (moduleType == LORA_E220_868) {
-        channel = (freqHz - 850000000) / 1000000;
+        channel = (freqHz - 850000000) / 100000;
+        // 确保通道值在有效范围内（0-255）
+        if (channel > 255) {
+            channel = 255;
+        }
         USBSerial.println("[E220] 868MHz mode, calculated channel: " + String(channel));
+        
+        uint32_t actualFreq = 850000000 + channel * 100000;
+        USBSerial.println("[E220] Calculated actual frequency: " + String(actualFreq) + " Hz");
     } else if (moduleType == LORA_E220_915) {
-        channel = (freqHz - 902000000) / 1000000;
+        channel = (freqHz - 902000000) / 100000;
+        // 确保通道值在有效范围内（0-255）
+        if (channel > 255) {
+            channel = 255;
+        }
         USBSerial.println("[E220] 915MHz mode, calculated channel: " + String(channel));
+        
+        uint32_t actualFreq = 902000000 + channel * 100000;
+        USBSerial.println("[E220] Calculated actual frequency: " + String(actualFreq) + " Hz");
+    }
+    
+    // 确保通道值在有效范围内（0-255）
+    if (channel > 255) {
+        channel = 255;
+    } else if (channel < 0) {
+        channel = 0;
     }
     
     config.own_channel = channel;
     USBSerial.println("[E220] Setting own_channel to: " + String(config.own_channel));
     
+    USBSerial.println("[E220] Calling InitLoRaSetting()...");
     int result = lora->InitLoRaSetting(config);
     USBSerial.println("[E220] InitLoRaSetting returned: " + String(result));
+    
+    delay(50);
     
     return result == 0;
 }
 
-bool E220Adapter::setBandwidth(uint8_t bandwidth) {
+bool E220Adapter::setBandwidth(uint16_t bandwidth) {
     if (!initialized) return false;
     
     LoRaConfigItem_t config;
@@ -232,7 +264,7 @@ bool SX1262Adapter::setFrequency(uint32_t freqHz) {
     return state == RADIOLIB_ERR_NONE;
 }
 
-bool SX1262Adapter::setBandwidth(uint8_t bandwidth) {
+bool SX1262Adapter::setBandwidth(uint16_t bandwidth) {
     if (!initialized) return false;
     
     float bwKhz = bandwidth;
@@ -327,7 +359,7 @@ bool RF95Adapter::setFrequency(uint32_t freqHz) {
     return state == RADIOLIB_ERR_NONE;
 }
 
-bool RF95Adapter::setBandwidth(uint8_t bandwidth) {
+bool RF95Adapter::setBandwidth(uint16_t bandwidth) {
     if (!initialized) return false;
     
     float bwKhz = bandwidth;

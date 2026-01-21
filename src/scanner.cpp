@@ -104,16 +104,16 @@ void FrequencyListener::listenTask() {
         uint32_t rxStartTime = millis();
         bool eventReceived = false;
         
-        USBSerial.printf("[Listener] RX window started at %lu ms\n", rxStartTime);
+        // USBSerial.printf("[Listener] RX window started at %lu ms\n", rxStartTime);
         
         while (millis() - rxStartTime < config.rxWindowMs && !shouldStop) {
             if (Serial2.available() > 0) {
-                USBSerial.println("[Listener] Data available on Serial2");
+                // USBSerial.println("[Listener] Data available on Serial2");
                 
                 RecvFrame_t frame;
                 int result = lora->receiveFrame(&frame);
                 
-                USBSerial.printf("[Listener] RecieveFrame returned: %d\n", result);
+                // USBSerial.printf("[Listener] RecieveFrame returned: %d\n", result);
                 
                 if (result == 0) {
                     handleRxDone(frame);
@@ -129,9 +129,9 @@ void FrequencyListener::listenTask() {
             vTaskDelay(pdMS_TO_TICKS(10));
         }
         
-        if (!eventReceived) {
-            USBSerial.println("[Listener] RX timeout (no event)");
-        }
+        // if (!eventReceived) {
+        //     USBSerial.println("[Listener] RX timeout (no event)");
+        // }
         
         if (!shouldStop) {
             vTaskDelay(pdMS_TO_TICKS(100));
@@ -161,36 +161,103 @@ bool FrequencyListener::setFrequency(uint32_t freq) {
 void FrequencyListener::nextFrequency() {
     if (config.frequencies.empty()) return;
     
-    config.currentFreqIndex = (config.currentFreqIndex + 1) % config.frequencies.size();
+    uint16_t nextIndex = (config.currentFreqIndex + 1) % config.frequencies.size();
+    uint32_t newFreq = config.frequencies[nextIndex].frequency;
     
-    uint32_t newFreq = config.frequencies[config.currentFreqIndex].frequency;
     USBSerial.printf("[Listener] Switching to next frequency: %lu Hz (index: %d)\n", 
-        newFreq, config.currentFreqIndex);
+        newFreq, nextIndex);
     
-    setFrequency(newFreq);
+    bool success = setFrequency(newFreq);
+    
+    // 即使设置失败，也要更新索引，这样用户可以继续浏览频点
+    config.currentFreqIndex = nextIndex;
     
     if (scopeDisplay) {
         scopeDisplay->setCurrentFreq(newFreq);
         scopeDisplay->setCurrentFreqIndex(config.currentFreqIndex, config.frequencies.size());
+    }
+    
+    if (!success) {
+        USBSerial.println("[Listener] Frequency setting failed, but index updated");
     }
 }
 
 void FrequencyListener::prevFrequency() {
     if (config.frequencies.empty()) return;
     
-    config.currentFreqIndex = (config.currentFreqIndex == 0) 
+    uint16_t prevIndex = (config.currentFreqIndex == 0) 
         ? config.frequencies.size() - 1 
         : config.currentFreqIndex - 1;
+    uint32_t newFreq = config.frequencies[prevIndex].frequency;
     
-    uint32_t newFreq = config.frequencies[config.currentFreqIndex].frequency;
     USBSerial.printf("[Listener] Switching to previous frequency: %lu Hz (index: %d)\n", 
-        newFreq, config.currentFreqIndex);
+        newFreq, prevIndex);
     
-    setFrequency(newFreq);
+    bool success = setFrequency(newFreq);
+    
+    // 即使设置失败，也要更新索引，这样用户可以继续浏览频点
+    config.currentFreqIndex = prevIndex;
     
     if (scopeDisplay) {
         scopeDisplay->setCurrentFreq(newFreq);
         scopeDisplay->setCurrentFreqIndex(config.currentFreqIndex, config.frequencies.size());
+    }
+    
+    if (!success) {
+        USBSerial.println("[Listener] Frequency setting failed, but index updated");
+    }
+}
+
+void FrequencyListener::nextFrequency(int step) {
+    if (config.frequencies.empty() || step <= 0) return;
+    
+    // 计算新索引，确保不超过边界
+    uint16_t nextIndex = config.currentFreqIndex + step;
+    if (nextIndex >= config.frequencies.size()) {
+        nextIndex = config.frequencies.size() - 1;
+    }
+    
+    uint32_t newFreq = config.frequencies[nextIndex].frequency;
+    USBSerial.printf("[Listener] Switching to next frequency (step %d): %lu Hz (index: %d)\n", 
+        step, newFreq, nextIndex);
+    
+    bool success = setFrequency(newFreq);
+    
+    // 即使设置失败，也要更新索引，这样用户可以继续浏览频点
+    config.currentFreqIndex = nextIndex;
+    
+    if (scopeDisplay) {
+        scopeDisplay->setCurrentFreq(newFreq);
+        scopeDisplay->setCurrentFreqIndex(config.currentFreqIndex, config.frequencies.size());
+    }
+    
+    if (!success) {
+        USBSerial.println("[Listener] Frequency setting failed, but index updated");
+    }
+}
+
+void FrequencyListener::prevFrequency(int step) {
+    if (config.frequencies.empty() || step <= 0) return;
+    
+    // 计算新索引，确保不小于0
+    uint16_t prevIndex = config.currentFreqIndex >= step ? config.currentFreqIndex - step : 0;
+    
+    uint32_t newFreq = config.frequencies[prevIndex].frequency;
+    USBSerial.printf("[Listener] Switching to previous frequency (step %d): %lu Hz (index: %d)\n", 
+        step, newFreq, prevIndex);
+    
+    bool success = setFrequency(newFreq);
+    
+    // 即使设置失败，也要更新索引，这样用户可以继续浏览频点
+    config.currentFreqIndex = prevIndex;
+    
+    if (scopeDisplay) {
+        scopeDisplay->setCurrentFreq(newFreq);
+        scopeDisplay->setCurrentFreqIndex(config.currentFreqIndex, config.frequencies.size());
+    }
+    
+    if (!success) {
+        USBSerial.println("[Listener] Frequency setting failed, but index updated");
     }
 }
 
@@ -282,8 +349,19 @@ uint32_t FrequencyListener::getCurrentFrequency() const {
     return config.frequencies[config.currentFreqIndex].frequency;
 }
 
-uint8_t FrequencyListener::getCurrentFreqIndex() const {
+uint16_t FrequencyListener::getCurrentFreqIndex() const {
     return config.currentFreqIndex;
+}
+
+uint32_t FrequencyListener::getFrequencyAt(uint16_t index) const {
+    if (index < config.frequencies.size()) {
+        return config.frequencies[index].frequency;
+    }
+    return 0;
+}
+
+uint8_t FrequencyListener::getFrequencyCount() const {
+    return config.frequencies.size();
 }
 
 ListenerConfig FrequencyListener::getConfig() const {
