@@ -15,6 +15,10 @@ ScopeDisplay* display = nullptr;
 volatile bool receivedSample = false;
 volatile ScanSample lastSample;
 
+unsigned long lastActivityTime = 0;
+bool screenOff = false;
+const unsigned long SCREEN_TIMEOUT = 60000; // 1分钟自动息屏
+
 void IRAM_ATTR onReceive() {
     receivedSample = true;
 }
@@ -171,6 +175,14 @@ void loop() {
     if (M5Cardputer.Keyboard.isChange() && millis() - lastKeyPressMillis >= debounceDelay) {
         auto keys = M5Cardputer.Keyboard.keysState();
         
+        // 检测到按键操作，更新活动时间并唤醒屏幕
+        lastActivityTime = millis();
+        if (screenOff) {
+            M5Cardputer.Display.wakeup();
+            screenOff = false;
+            USBSerial.println("Screen wakeup");
+        }
+        
         for (auto key : keys.word) {
             switch (key) {
                 case '1':
@@ -222,7 +234,7 @@ void loop() {
                 case '-':
                     if (listener) {
                         listener->prevFrequency();
-                        uint8_t idx = listener->getCurrentFreqIndex();
+                        uint16_t idx = listener->getCurrentFreqIndex();
                         USBSerial.printf("Previous frequency: index %d\n", idx);
                     }
                     minusKeyPressed = true;
@@ -230,7 +242,7 @@ void loop() {
                 case '=':
                     if (listener) {
                         listener->nextFrequency();
-                        uint8_t idx = listener->getCurrentFreqIndex();
+                        uint16_t idx = listener->getCurrentFreqIndex();
                         USBSerial.printf("Next frequency: index %d\n", idx);
                     }
                     equalKeyPressed = true;
@@ -314,6 +326,14 @@ void loop() {
         const std::vector<RadarPoint>& points = listener->getRadarPoints();
         const EventStats& stats = listener->getEventStats();
         display->update(points, stats);
+    }
+    
+    // 检查是否需要自动息屏
+    unsigned long currentTime = millis();
+    if (!screenOff && currentTime - lastActivityTime >= SCREEN_TIMEOUT) {
+        M5Cardputer.Display.sleep();
+        screenOff = true;
+        USBSerial.println("Screen sleep");
     }
     
     delay(10);
